@@ -34,6 +34,57 @@
     #back-btn { margin-top: 20px; background-color: #30363d; color: #58a6ff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
     #back-btn:hover { background-color: #58a6ff; color: white; }
     canvas { background-color: #0d1117; border-radius: 10px; padding: 10px; margin-top: 20px; }
+
+    /* ===== PANEL DE CONTROL DESPLEGABLE ===== */
+    #control-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.6);
+      padding: 15px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+      transition: 0.3s;
+    }
+    #control-panel button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 1em;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-start { background-color: #238636; }
+    .btn-stop { background-color: #d93f0b; }
+    .btn-restart { background-color: #6e40c9; }
+    #control-panel button:hover { opacity: 0.8; }
+
+    /* Botón redondo para abrir/cerrar */
+    #toggle-control {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #58a6ff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 55px;
+      height: 55px;
+      font-size: 1.8em;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      transition: 0.3s;
+      z-index: 1001;
+    }
+    #toggle-control:hover { transform: scale(1.1); background-color: #1f6feb; }
+
+
   </style>
 </head>
 <body>
@@ -101,6 +152,16 @@
       src="c1e0db51-9da9-48e7-930d-81286510de0c.png" 
       width="220" 
       alt="Sistema de lavado de contenedores">
+
+  <!-- ===== PANEL DE CONTROL DESPLEGABLE ===== -->
+  <button id="toggle-control">⚙️</button>
+
+  <div id="control-panel">
+    <button class="btn-start" onclick="enviarAccion('iniciar')">🟢 Iniciar</button>
+    <button class="btn-stop" onclick="enviarAccion('detener')">🔴 Detener</button>
+    <button class="btn-restart" onclick="enviarAccion('reiniciar')">🔄 Reiniciar</button>
+  </div>
+
 
   <footer>Actualizado en tiempo real | © 2025 Proyecto Limpiador de Contenedores PUCP</footer>
 
@@ -288,6 +349,37 @@
       chart.update("none"); // 🔹 evita cualquier animación
 
     }
+
+    // =============================
+    // 🔹 PANEL DE CONTROL Y MQTT COMANDOS
+    // =============================
+
+    // Tópico donde el ESP32 escuchará las acciones
+    const TOPIC_CONTROL = "limpiador/control";
+
+    // Función para enviar una acción (iniciar / detener / reiniciar)
+    function enviarAccion(accion) {
+      if (!client.connected) {
+        console.warn("⚠️ No conectado a MQTT, no se envía comando");
+        return;
+      }
+      const msg = JSON.stringify({ accion: accion });
+      client.publish(TOPIC_CONTROL, msg);
+      console.log("📤 Enviado comando:", msg);
+    }
+
+    // Control del panel desplegable
+    const toggleBtn = document.getElementById("toggle-control");
+    const controlPanel = document.getElementById("control-panel");
+
+    toggleBtn.addEventListener("click", () => {
+      const visible = controlPanel.style.display === "flex";
+      controlPanel.style.display = visible ? "none" : "flex";
+      toggleBtn.innerText = visible ? "⚙️" : "❌";
+    });
+
+
+
   </script>
 </body>
 </html>
