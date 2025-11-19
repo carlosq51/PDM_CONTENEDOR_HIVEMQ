@@ -278,7 +278,7 @@
         document.getElementById("gr").innerText = pGR + "%";
         
         let pLE = calcularPorcentaje(payload.LE, maxValues.LE);
-        document.getElementById("le").innerText = pLE + "%";
+        document.getElementById("le").innerText = pLE + "%" + " (" + LE + ")" ;
         
         let pLEV = calcularPorcentaje(payload.LEV, maxValues.LEV);
         document.getElementById("lev").innerText = pLEV + "%";
@@ -449,5 +449,6 @@
   </script>
 </body>
 </html>
+
 
 
