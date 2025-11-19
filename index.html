@@ -211,6 +211,17 @@
     // =============================
     // 🔹 VARIABLES GLOBALES
     // =============================
+
+    // Valores máximos de cada proceso
+    const maxValues = {
+      GL: 141,
+      GR: 141,
+      LE: 8000,
+      LEV: 17000,
+      LI: 1750
+    };
+
+    
     let dataHist = { GL: [], GR: [], LE: [], LEV: [], LI: [] };
     let labels = [];
     let currentDetail = "garras";
@@ -221,6 +232,18 @@
     let sumHist = { GL: 0, GR: 0, LE: 0, LEV: 0, LI: 0 };
     let countHist = { GL: 0, GR: 0, LE: 0, LEV: 0, LI: 0 };
 
+    // Función para calcular porcentaje
+    function calcularPorcentaje(actual, maximo) {
+      if (!maximo || maximo <= 0) return 0;
+    
+      let p = (actual * 100) / maximo;
+    
+      if (p < 0) p = 0;
+      if (p > 100) p = 100;
+    
+      return Math.round(p);
+    }
+    
     // =============================
     // 🔹 CONEXIÓN MQTT
     // =============================
@@ -249,18 +272,27 @@
         const payload = JSON.parse(message.toString());
 
         // Panel principal
-        document.getElementById("gl").innerText = payload.GL;
-        document.getElementById("gr").innerText = payload.GR;
-        document.getElementById("le").innerText = payload.LE;
-        document.getElementById("lev").innerText = payload.LEV;
-        document.getElementById("li").innerText = payload.LI;
+        let pGL = calcularPorcentaje(payload.GL, maxValues.GL);
+        let pGR = calcularPorcentaje(payload.GR, maxValues.GR);
+        document.getElementById("gl").innerText = pGL + "%";
+        document.getElementById("gr").innerText = pGR + "%";
+        
+        let pLE = calcularPorcentaje(payload.LE, maxValues.LE);
+        document.getElementById("le").innerText = pLE + "%";
+        
+        let pLEV = calcularPorcentaje(payload.LEV, maxValues.LEV);
+        document.getElementById("lev").innerText = pLEV + "%";
+        
+        let pLI = calcularPorcentaje(payload.LI, maxValues.LI);
+        document.getElementById("li").innerText = pLI + "%";
+        
         document.getElementById("estado").innerText = payload.estado;
         document.getElementById("completado").innerText = payload.completado;
 
-        updateBar("gl-bar", payload.GL);
-        updateBar("le-bar", payload.LE);
-        updateBar("lev-bar", payload.LEV);
-        updateBar("li-bar", payload.LI);
+        updateBar("gl-bar", pGL);
+        updateBar("le-bar", pLE);
+        updateBar("lev-bar", pLEV);
+        updateBar("li-bar", pLI);
 
         // Histórico (máx 30 puntos)
         const t = new Date().toLocaleTimeString();
@@ -417,4 +449,5 @@
   </script>
 </body>
 </html>
+
 
