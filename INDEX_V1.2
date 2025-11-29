@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>💧 SCADA - Limpiador de Contenedores</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { background-color: #0d1117; color: #f1f1f1; font-family: "Segoe UI", Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
+    h1 { color: #58a6ff; margin-bottom: 10px; }
+    #main-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 1100px; margin: 30px auto; transition: 0.3s; }
+    .card { background-color: #161b22; border-radius: 15px; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.4); cursor: pointer; transition: 0.3s; }
+    .card:hover { transform: scale(1.05); background-color: #1c2330; }
+    .title { font-size: 1.2em; color: #58a6ff; }
+    .value { font-size: 2em; margin: 10px 0; }
+    .bar { height: 10px; background-color: #30363d; border-radius: 10px; overflow: hidden; }
+    .bar-fill { height: 10px; background-color: #58a6ff; width: 0%; transition: width 0.5s; }
+    .status { font-size: 1.3em; font-weight: bold; color: #ffd700; }
+    .turbina { margin-top: 40px; animation: spin 3s linear infinite; }
+    .paused { animation-play-state: paused; opacity: 0.5; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    footer { margin-top: 30px; color: #777; font-size: 0.8em; }
+
+    /* Panel detalle */
+    #detail-panel { display: none; background-color: #161b22; border-radius: 15px; padding: 25px; max-width: 900px; margin: 30px auto; box-shadow: 0 0 15px rgba(0,0,0,0.5); transition: 0.3s; }
+    #detail-title { color: #58a6ff; font-size: 1.5em; margin-bottom: 15px; }
+    .selector { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
+    .selector button { background-color: #30363d; color: #f1f1f1; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+    .selector button.active { background-color: #58a6ff; color: white; }
+    .data-grid { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px; }
+    .data-card { background-color: #1c2128; border-radius: 10px; padding: 15px; width: 180px; }
+    .data-card h3 { margin-bottom: 5px; }
+    .value2 { font-size: 1.8em; color: #58a6ff; }
+    #back-btn { margin-top: 20px; background-color: #30363d; color: #58a6ff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+    #back-btn:hover { background-color: #58a6ff; color: white; }
+    canvas { background-color: #0d1117; border-radius: 10px; padding: 10px; margin-top: 20px; }
+
+    /* ===== PANEL DE CONTROL MEJORADO ===== */
+    #control-panel {
+      position: fixed;
+      bottom: 50%;
+      right: 50%;
+      transform: translate(50%, 50%);
+      background-color: #161b22;
+      border: 2px solid #30363d;
+      border-radius: 20px;
+      padding: 25px;
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+      z-index: 1000;
+      width: 280px;          /* ⬅️ tamaño más grande */
+      box-shadow: 0 0 25px rgba(0,0,0,0.7);
+      transition: 0.3s;
+    }
+    
+    /* Botones grandes */
+    #control-panel button {
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 1.2em;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    
+    .btn-start { background-color: #238636; }
+    .btn-stop { background-color: #d93f0b; }
+    .btn-restart { background-color: #6e40c9; }
+    
+    #control-panel button:hover {
+      opacity: 0.85;
+    }
+    
+    /* Botón flotante */
+    #toggle-control {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #58a6ff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 65px;
+      height: 65px;
+      font-size: 2em;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      transition: 0.3s;
+      z-index: 1001;
+    }
+    
+    #toggle-control:hover {
+      transform: scale(1.15);
+      background-color: #1f6feb;
+    }
+    
+    /* RESPONSIVO PARA CELULARES */
+    @media (max-width: 600px) {
+      #control-panel {
+        width: 80%;       /* ocupa gran parte de la pantalla */
+        bottom: 50%;
+        right: 50%;
+        transform: translate(50%, 50%);
+        padding: 20px;
+      }
+    
+      #control-panel button {
+        font-size: 1.1em;
+        padding: 12px;
+      }
+    
+      #toggle-control {
+        width: 60px;
+        height: 60px;
+        font-size: 1.8em;
+      }
+    }
+
+
+  </style>
+</head>
+<body>
+  <h1>💧 Panel SCADA - Limpiador de Contenedores</h1>
+  <p>Vista general del sistema en tiempo real</p>
+
+  <!-- ===== PANEL PRINCIPAL ===== -->
+  <div id="main-panel">
+    <div class="card" onclick="showDetail('garras')">
+      <div class="title">🖐️ Garras</div>
+      <div class="value">GL: <span id="gl">--</span> | GR: <span id="gr">--</span></div>
+      <div class="bar"><div id="gl-bar" class="bar-fill"></div></div>
+    </div>
+
+    <div class="card" onclick="showDetail('le')">
+      <div class="title">🔄 Lavado Externo</div>
+      <div class="value" id="le">--</div>
+      <div class="bar"><div id="le-bar" class="bar-fill"></div></div>
+    </div>
+
+    <div class="card" onclick="showDetail('lev')">
+      <div class="title">⬆️ Brazo Levantador</div>
+      <div class="value" id="lev">--</div>
+      <div class="bar"><div id="lev-bar" class="bar-fill"></div></div>
+    </div>
+
+    <div class="card" onclick="showDetail('li')">
+      <div class="title">💡 Lavado Interno</div>
+      <div class="value" id="li">--</div>
+      <div class="bar"><div id="li-bar" class="bar-fill"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="title">⚙️ Estado del Sistema</div>
+      <div class="status" id="estado">--</div>
+    </div>
+
+    <div class="card">
+      <div class="title">✅ Ciclo Completado</div>
+      <div class="value" id="completado">--</div>
+    </div>
+  </div>
+
+  <!-- ===== PANEL DETALLE ===== -->
+  <div id="detail-panel">
+    <div id="detail-title">🖐️ Garras</div>
+
+    <div id="garras-selector" class="selector" style="display:none;">
+      <button id="btn-izq" class="active">🖐️ Izquierda (GL)</button>
+      <button id="btn-der">✋ Derecha (GR)</button>
+    </div>
+
+    <div class="data-grid">
+      <div class="data-card"><h3>Valor Actual</h3><div class="value2" id="detalle-actual">--</div></div>
+      <div class="data-card"><h3>Mínimo</h3><div class="value2" id="detalle-min">--</div></div>
+      <div class="data-card"><h3>Máximo</h3><div class="value2" id="detalle-max">--</div></div>
+      <div class="data-card"><h3>Promedio</h3><div class="value2" id="detalle-prom">--</div></div>
+    </div>
+
+    <canvas id="detalle-chart" width="800" height="320"></canvas>
+    <button id="back-btn" onclick="hideDetail()">⬅️ Volver</button>
+  </div>
+
+  <img id="turbina" class="turbina paused" 
+      src="c1e0db51-9da9-48e7-930d-81286510de0c.png" 
+      width="220" 
+      alt="Sistema de lavado de contenedores">
+
+  <!-- ===== PANEL DE CONTROL DESPLEGABLE ===== -->
+  <button id="toggle-control">⚙️</button>
+
+  <div id="control-panel">
+    <button class="btn-start" onclick="enviarAccion('iniciar')">🟢 Iniciar</button>
+    <button class="btn-stop" onclick="enviarAccion('detener')">🔴 Detener</button>
+    <button class="btn-restart" onclick="enviarAccion('reiniciar')">🔄 Reiniciar</button>
+  </div>
+
+
+  <footer>Actualizado en tiempo real | © 2025 Proyecto Limpiador de Contenedores PUCP</footer>
+
+  <script>
+    // =============================
+    // 🔹 CONFIG MQTT HiveMQ Cloud
+    // =============================
+    const MQTT_BROKER = "wss://bff7e0c9d9204f52a92c84081f48b9e3.s1.eu.hivemq.cloud:8884/mqtt";
+    const MQTT_USER = "carlos";
+    const MQTT_PASS = "PDMContenedor1";
+    const TOPIC = "limpiador/telemetria";
+
+    // =============================
+    // 🔹 VARIABLES GLOBALES
+    // =============================
+
+    // Valores máximos de cada proceso
+    const maxValues = {
+      GL: 141,
+      GR: 141,
+      LE: 8000,
+      LEV: 17000,
+      LI: 1750
+    };
+
+    const completadoTexto = {
+      0: "🟨 En Proceso",
+      1: "🟩 Contenedores Limpios"
+    };
+
+
+    const estadosTexto = {
+      0: "⏳ Esperando comandos",
+      1: "⚙️ Calibrando",
+      2: "🖐️ Cerrando garras",
+      3: "💦 Limpieza externa",
+      4: "⬆️ Levantando contenedores",
+      5: "💡 Limpieza interna"
+    };
+
+
+    
+    let dataHist = { GL: [], GR: [], LE: [], LEV: [], LI: [] };
+    let labels = [];
+    let currentDetail = "garras";
+    let currentGarra = "GL";
+
+    let minHist = { GL: Infinity, GR: Infinity, LE: Infinity, LEV: Infinity, LI: Infinity };
+    let maxHist = { GL: -Infinity, GR: -Infinity, LE: -Infinity, LEV: -Infinity, LI: -Infinity };
+    let sumHist = { GL: 0, GR: 0, LE: 0, LEV: 0, LI: 0 };
+    let countHist = { GL: 0, GR: 0, LE: 0, LEV: 0, LI: 0 };
+
+    // Función para calcular porcentaje
+    function calcularPorcentaje(actual, maximo) {
+      if (!maximo || maximo <= 0) return 0;
+    
+      let p = (actual * 100) / maximo;
+    
+      if (p < 0) p = 0;
+      if (p > 100) p = 100;
+    
+      return Math.round(p);
+    }
+    
+    // =============================
+    // 🔹 CONEXIÓN MQTT
+    // =============================
+    const client = mqtt.connect(MQTT_BROKER, {
+      username: MQTT_USER,
+      password: MQTT_PASS,
+      protocolVersion: 4,
+      clean: true,
+      reconnectPeriod: 2000,
+      connectTimeout: 4000,
+    });
+
+    client.on("connect", () => {
+      console.log("✅ Conectado a HiveMQ Cloud");
+      client.subscribe(TOPIC);
+    });
+
+    client.on("error", (err) => console.error("❌ Error MQTT:", err));
+    client.on("close", () => console.warn("⚠️ Conexión MQTT cerrada"));
+
+    // =============================
+    // 🔹 MENSAJES MQTT
+    // =============================
+    client.on("message", (topic, message) => {
+      try {
+        const payload = JSON.parse(message.toString());
+
+        // Panel principal
+        let pGL = calcularPorcentaje(payload.GL, maxValues.GL);
+        let pGR = calcularPorcentaje(payload.GR, maxValues.GR);
+        document.getElementById("gl").innerText = pGL + "%";
+        document.getElementById("gr").innerText = pGR + "%";
+        
+        let pLE = calcularPorcentaje(payload.LE, maxValues.LE);
+        document.getElementById("le").innerText = pLE + "%";
+        
+        let pLEV = calcularPorcentaje(payload.LEV, maxValues.LEV);
+        document.getElementById("lev").innerText = pLEV + "%";
+        
+        let pLI = calcularPorcentaje(payload.LI, maxValues.LI);
+        document.getElementById("li").innerText = pLI + "%";
+        
+        document.getElementById("estado").innerText =
+          estadosTexto[payload.estado] || "Estado desconocido";
+
+        document.getElementById("completado").innerText =
+          completadoTexto[payload.completado] || "Desconocido";
+
+        updateBar("gl-bar", pGL);
+        updateBar("le-bar", pLE);
+        updateBar("lev-bar", pLEV);
+        updateBar("li-bar", pLI);
+
+        // Histórico (máx 30 puntos)
+        const t = new Date().toLocaleTimeString();
+        labels.push(t); if (labels.length > 800) labels.shift();
+
+        for (let k of ["GL","GR","LE","LEV","LI"]) {
+          dataHist[k].push(Number(payload[k]) || 0);
+          if (dataHist[k].length > 800) dataHist[k].shift();
+        }
+
+        toggleTurbina(payload.estado);
+        updateDetail();
+      } catch (err) {
+        console.error("Error al procesar datos MQTT:", err);
+      }
+    });
+
+    // =============================
+    // 🔹 AUXILIARES UI
+    // =============================
+    function updateBar(id, val) {
+      const width = Math.min(100, Math.abs(Number(val) || 0) % 100);
+      document.getElementById(id).style.width = width + "%";
+    }
+
+    function toggleTurbina(estado) {
+      const turbina = document.getElementById("turbina");
+      turbina.classList.toggle("paused", !(estado == 1 || estado == 4));
+    }
+
+    // =============================
+    // 🔹 GRÁFICO (Chart.js)
+    // =============================
+    const ctx = document.getElementById("detalle-chart").getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: { labels, datasets: [{
+        label: "Garra Izquierda (GL)",
+        borderColor: "#58a6ff",
+        backgroundColor: "rgba(88,166,255,0.2)",
+        data: [],
+        fill: true,
+        tension: 0,
+        options: {
+          animation: {
+            duration: 100, // animación corta y suave
+          },
+        }
+      }]},
+      options: { scales: { x: { title: { display: true, text: "Tiempo" }}, y: { beginAtZero: true }}}
+    });
+
+    // =============================
+    // 🔹 DETALLE Y NAVEGACIÓN
+    // =============================
+    const btnIzq = document.getElementById("btn-izq");
+    const btnDer = document.getElementById("btn-der");
+    if (btnIzq && btnDer) {
+      btnIzq.addEventListener("click", () => { currentGarra = "GL"; toggleButtons(); updateDetail(); });
+      btnDer.addEventListener("click", () => { currentGarra = "GR"; toggleButtons(); updateDetail(); });
+    }
+
+    function toggleButtons() {
+      btnIzq.classList.toggle("active", currentGarra === "GL");
+      btnDer.classList.toggle("active", currentGarra === "GR");
+    }
+
+    // Hacemos globales estas funciones para que funcionen los onclick del HTML
+    window.showDetail = function(tipo) {
+      currentDetail = tipo;
+      document.getElementById("main-panel").style.display = "none";
+      document.getElementById("detail-panel").style.display = "block";
+      document.getElementById("garras-selector").style.display = (tipo === "garras") ? "flex" : "none";
+
+      const titles = {
+        garras: "🖐️ Garras (GL/GR)",
+        le: "🔄 Lavado Externo (LE)",
+        lev: "⬆️ Brazo Levantador (LEV)",
+        li: "💡 Lavado Interno (LI)"
+      };
+      document.getElementById("detail-title").innerText = titles[tipo];
+      updateDetail();
+    }
+
+    window.hideDetail = function() {
+      document.getElementById("detail-panel").style.display = "none";
+      document.getElementById("main-panel").style.display = "grid";
+    }
+
+    function updateDetail() {
+      if (document.getElementById("detail-panel").style.display !== "block") return;
+
+      const key = (currentDetail === "garras") ? currentGarra : currentDetail.toUpperCase();
+      const dataSel = (dataHist[key] || []).map(v => Number(v) || 0);
+      if (!dataSel.length) return;
+
+      const act = dataSel.at(-1);
+
+      // Acumuladores globales (min/max/prom) por variable
+      sumHist[key] += act;
+      countHist[key]++;
+      minHist[key] = Math.min(minHist[key], act);
+      maxHist[key] = Math.max(maxHist[key], act);
+      const prom = sumHist[key] / countHist[key];
+
+      // UI de tarjetas
+      document.getElementById("detalle-actual").innerText = act.toFixed(1);
+      document.getElementById("detalle-min").innerText = minHist[key].toFixed(1);
+      document.getElementById("detalle-max").innerText = maxHist[key].toFixed(1);
+      document.getElementById("detalle-prom").innerText = prom.toFixed(1);
+
+      // Gráfico
+      chart.data.labels = [...labels];
+      chart.data.datasets[0].data = [...dataSel];
+      chart.data.datasets[0].label =
+        (currentDetail === "garras")
+          ? (currentGarra === "GL" ? "Garra Izquierda (GL)" : "Garra Derecha (GR)")
+          : document.getElementById("detail-title").innerText;
+
+      chart.update("none"); // 🔹 evita cualquier animación
+
+    }
+
+    // =============================
+    // 🔹 PANEL DE CONTROL Y MQTT COMANDOS
+    // =============================
+
+    // Tópico donde el ESP32 escuchará las acciones
+    const TOPIC_CONTROL = "limpiador/control";
+
+    // Función para enviar una acción (iniciar / detener / reiniciar)
+    function enviarAccion(accion) {
+      if (!client.connected) {
+        console.warn("⚠️ No conectado a MQTT, no se envía comando");
+        return;
+      }
+      const msg = JSON.stringify({ accion: accion });
+      client.publish(TOPIC_CONTROL, msg);
+      console.log("📤 Enviado comando:", msg);
+    }
+
+    // Control del panel desplegable
+    const toggleBtn = document.getElementById("toggle-control");
+    const controlPanel = document.getElementById("control-panel");
+
+    toggleBtn.addEventListener("click", () => {
+      const visible = controlPanel.style.display === "flex";
+      controlPanel.style.display = visible ? "none" : "flex";
+      toggleBtn.innerText = visible ? "⚙️" : "❌";
+    });
+
+
+
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
