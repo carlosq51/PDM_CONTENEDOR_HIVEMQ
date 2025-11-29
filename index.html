@@ -11,12 +11,13 @@
     #main-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 1100px; margin: 30px auto; transition: 0.3s; }
     .card { background-color: #161b22; border-radius: 15px; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.4); cursor: pointer; transition: 0.3s; }
     .card:hover { transform: scale(1.05); background-color: #1c2330; }
-    .title { font-size: 1.2em; color: #58a6ff; }
-    .value { font-size: 2em; margin: 10px 0; }
+    .title { font-size: 1.1em; color: #58a6ff; }
+    .value { font-size: 1.6em; margin: 10px 0; }
     .bar { height: 10px; background-color: #30363d; border-radius: 10px; overflow: hidden; }
     .bar-fill { height: 10px; background-color: #58a6ff; width: 0%; transition: width 0.5s; }
     .status { font-size: 1.3em; font-weight: bold; color: #ffd700; }
     .turbina { margin-top: 40px; animation: spin 3s linear infinite; }
+    .estado-garras-text { font-size: 1.1em; line-height: 1.4; }
     .paused { animation-play-state: paused; opacity: 0.5; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     footer { margin-top: 30px; color: #777; font-size: 0.8em; }
@@ -118,6 +119,29 @@
       }
     }
 
+    /* Ajustes para celulares */
+    @media (max-width: 600px) {
+    
+      .title {
+        font-size: 0.95em;
+      }
+    
+      .value {
+        font-size: 1.2em;
+      }
+    
+      .status {
+        font-size: 1.1em;
+      }
+    
+      .estado-garras-text {
+        font-size: 1em;
+      }
+    
+      .card {
+        padding: 15px;
+      }
+    }
 
   </style>
 </head>
@@ -161,13 +185,13 @@
       <div class="value" id="completado">--</div>
     </div>
 
-    <div class="card">
-      <div class="title">🧩 Estado de Garras</div>
-      <div class="value" style="font-size:1.3em; line-height:1.5;">
-        Izquierda: <span id="estado-garra-izq">--</span><br>
-        Derecha: <span id="estado-garra-der">--</span>
-      </div>
+  <div class="card">
+    <div class="title">🧩 Estado de Garras</div>
+    <div class="value estado-garras-text">
+      Izquierda: <span id="estado-garra-izq">--</span><br>
+      Derecha: <span id="estado-garra-der">--</span>
     </div>
+  </div>
     
   </div>
 
@@ -506,6 +530,7 @@
   </script>
 </body>
 </html>
+
 
 
 
