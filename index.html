@@ -344,7 +344,7 @@
     // 🔹 AUXILIARES UI
     // =============================
     function updateBar(id, val) {
-      const width = Math.min(100, Math.abs(Number(val) || 0) % 100);
+      const width = Math.max(0, Math.min(100, Number(val) || 0));
       document.getElementById(id).style.width = width + "%";
     }
 
@@ -506,6 +506,7 @@
   </script>
 </body>
 </html>
+
 
 
 
