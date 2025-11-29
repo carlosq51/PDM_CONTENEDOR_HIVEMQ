@@ -221,6 +221,12 @@
       LI: 1750
     };
 
+    const completadoTexto = {
+      0: "🟥 PARADO",
+      1: "🟩 LIMPIANDO"
+    };
+
+
     const estadosTexto = {
       0: "⏳ Esperando comandos",
       1: "⚙️ Calibrando",
@@ -299,7 +305,8 @@
         document.getElementById("estado").innerText =
           estadosTexto[payload.estado] || "Estado desconocido";
 
-        document.getElementById("completado").innerText = payload.completado;
+        document.getElementById("completado").innerText =
+          completadoTexto[payload.completado] || "Desconocido";
 
         updateBar("gl-bar", pGL);
         updateBar("le-bar", pLE);
@@ -461,6 +468,7 @@
   </script>
 </body>
 </html>
+
 
 
 
