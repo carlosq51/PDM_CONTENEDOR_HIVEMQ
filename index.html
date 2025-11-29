@@ -162,6 +162,15 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="title">🧩 Estado de Garras</div>
+    <div class="value" style="font-size:1.3em; line-height:1.5;">
+        Izquierda: <span id="estado-garra-izq">--</span><br>
+        Derecha: <span id="estado-garra-der">--</span>
+    </div>
+  </div>
+
+
   <!-- ===== PANEL DETALLE ===== -->
   <div id="detail-panel">
     <div id="detail-title">🖐️ Garras</div>
@@ -324,6 +333,7 @@
 
         toggleTurbina(payload.estado);
         updateDetail();
+        actualizarEstadoGarras(payload);
       } catch (err) {
         console.error("Error al procesar datos MQTT:", err);
       }
@@ -337,6 +347,33 @@
       document.getElementById(id).style.width = width + "%";
     }
 
+    function actualizarEstadoGarras(payload) {
+      const estado = payload.estado;
+      const gl = Number(payload.GL);
+      const gr = Number(payload.GR);
+    
+      let izq = "";
+      let der = "";
+    
+      // Caso especial: estado cerrando garras
+      if (estado === 2) {
+        izq = "⚙️ MOVIENDO GARRAS";
+        der = "⚙️ MOVIENDO GARRAS";
+      } else {
+        // Izquierda
+        if (gl >= 5 && gl <= 136) izq = "⭕ SIN CONTENEDOR";
+        else izq = "🔘 CON CONTENEDOR";
+    
+        // Derecha
+        if (gr >= 5 && gr <= 136) der = "⭕ SIN CONTENEDOR";
+        else der = "🔘 CON CONTENEDOR";
+      }
+    
+      document.getElementById("estado-garra-izq").innerText = izq;
+      document.getElementById("estado-garra-der").innerText = der;
+    }
+
+    
     function toggleTurbina(estado) {
       const turbina = document.getElementById("turbina");
       turbina.classList.toggle("paused", !(estado == 1 || estado == 4));
@@ -468,6 +505,7 @@
   </script>
 </body>
 </html>
+
 
 
 
