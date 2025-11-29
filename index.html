@@ -362,11 +362,11 @@
         der = "⚙️ MOVIENDO GARRAS";
       } else {
         // Izquierda
-        if (gl <= 5 && gl >= 136) izq = "⭕ SIN CONTENEDOR";
+        if (gl <= 5 || gl >= 136) izq = "⭕ SIN CONTENEDOR";
         else izq = "🔘 CON CONTENEDOR";
     
         // Derecha
-        if (gr <= 5 && gr >= 136) der = "⭕ SIN CONTENEDOR";
+        if (gr <= 5 || gr >= 136) der = "⭕ SIN CONTENEDOR";
         else der = "🔘 CON CONTENEDOR";
       }
     
@@ -506,6 +506,7 @@
   </script>
 </body>
 </html>
+
 
 
 
