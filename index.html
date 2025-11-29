@@ -221,6 +221,16 @@
       LI: 1750
     };
 
+    const estadosTexto = {
+      0: "⏳ Esperando comandos",
+      1: "⚙️ Calibrando",
+      2: "🖐️ Cerrando garras",
+      3: "💦 Limpieza externa",
+      4: "⬆️ Levantando contenedores",
+      5: "💡 Limpieza interna"
+    };
+
+
     
     let dataHist = { GL: [], GR: [], LE: [], LEV: [], LI: [] };
     let labels = [];
@@ -286,7 +296,9 @@
         let pLI = calcularPorcentaje(payload.LI, maxValues.LI);
         document.getElementById("li").innerText = pLI + "%";
         
-        document.getElementById("estado").innerText = payload.estado;
+        document.getElementById("estado").innerText =
+          estadosTexto[payload.estado] || "Estado desconocido";
+
         document.getElementById("completado").innerText = payload.completado;
 
         updateBar("gl-bar", pGL);
@@ -449,6 +461,7 @@
   </script>
 </body>
 </html>
+
 
 
 
